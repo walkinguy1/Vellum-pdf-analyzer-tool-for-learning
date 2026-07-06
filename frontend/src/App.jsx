@@ -4,43 +4,77 @@ import ChatPanel from './components/ChatPanel.jsx'
 import { uploadDocument, getStatus, askQuestion } from './api.js'
 
 export default function App() {
-  const [doc, setDoc] = useState(null) // { docId, filename }
-  const [status, setStatus] = useState(null)
-  const pollRef = useRef(null)
+  const [docs, setDocs] = useState([])
+  const pollRefs = useRef({})
 
   useEffect(() => {
-    return () => clearInterval(pollRef.current)
+    return () => {
+      Object.values(pollRefs.current).forEach((intervalId) => clearInterval(intervalId))
+    }
   }, [])
 
-  async function handleFileSelected(file) {
-    clearInterval(pollRef.current)
-    setStatus(null)
-
+  async function trackDocument(file) {
     const { doc_id, filename } = await uploadDocument(file)
-    setDoc({ docId: doc_id, filename })
+    setDocs((currentDocs) => [
+      ...currentDocs,
+      {
+        docId: doc_id,
+        filename,
+        selected: true,
+        status: { stage: 'extracting', pages: 0, chunks: 0, embedded: 0, total: 0, steps: [] },
+      },
+    ])
 
-    pollRef.current = setInterval(async () => {
+    pollRefs.current[doc_id] = setInterval(async () => {
       try {
         const s = await getStatus(doc_id)
-        setStatus(s)
+        setDocs((currentDocs) => currentDocs.map((doc) => (doc.docId === doc_id ? { ...doc, status: s } : doc)))
         if (s.stage === 'ready' || s.stage === 'error') {
-          clearInterval(pollRef.current)
+          clearInterval(pollRefs.current[doc_id])
+          delete pollRefs.current[doc_id]
         }
       } catch {
-        clearInterval(pollRef.current)
+        clearInterval(pollRefs.current[doc_id])
+        delete pollRefs.current[doc_id]
       }
     }, 700)
   }
 
-  function handleReplace() {
-    clearInterval(pollRef.current)
-    setDoc(null)
-    setStatus(null)
+  async function handleFilesSelected(files) {
+    for (const file of files) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) continue
+      try {
+        await trackDocument(file)
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}`, error)
+      }
+    }
   }
 
   async function handleAsk(question) {
-    return askQuestion(doc.docId, question)
+    const activeDocIds = docs.filter((doc) => doc.selected && doc.status?.stage === 'ready').map((doc) => doc.docId)
+    return askQuestion(activeDocIds, question)
   }
+
+  function handleToggleSelected(docId) {
+    setDocs((currentDocs) => currentDocs.map((doc) => (doc.docId === docId ? { ...doc, selected: !doc.selected } : doc)))
+  }
+
+  function handleSelectAll() {
+    setDocs((currentDocs) => currentDocs.map((doc) => ({ ...doc, selected: true })))
+  }
+
+  function handleClearAll() {
+    Object.values(pollRefs.current).forEach((intervalId) => clearInterval(intervalId))
+    pollRefs.current = {}
+    setDocs([])
+  }
+
+  const selectedDocs = docs.filter((doc) => doc.selected)
+  const readySelectedCount = selectedDocs.filter((doc) => doc.status?.stage === 'ready').length
+  const focusLabel = selectedDocs.length
+    ? `Searching ${readySelectedCount} ready file${readySelectedCount === 1 ? '' : 's'} out of ${selectedDocs.length} selected.`
+    : 'Select one or more files in the sidebar to focus the assistant.'
 
   return (
     <div className="app">
@@ -53,12 +87,13 @@ export default function App() {
 
       <div className="app-body">
         <DocumentPanel
-          doc={doc}
-          status={status}
-          onFileSelected={handleFileSelected}
-          onReplace={handleReplace}
+          docs={docs}
+          onFilesSelected={handleFilesSelected}
+          onToggleSelected={handleToggleSelected}
+          onClearAll={handleClearAll}
+          onSelectAll={handleSelectAll}
         />
-        <ChatPanel ready={status?.stage === 'ready'} onAsk={handleAsk} />
+        <ChatPanel ready={readySelectedCount > 0} onAsk={handleAsk} focusLabel={focusLabel} />
       </div>
     </div>
   )

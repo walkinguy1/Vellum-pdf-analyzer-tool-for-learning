@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import SourceCard from './SourceCard.jsx'
 
-export default function ChatPanel({ ready, onAsk }) {
+export default function ChatPanel({ ready, onAsk, focusLabel }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [asking, setAsking] = useState(false)
@@ -39,8 +39,8 @@ export default function ChatPanel({ ready, onAsk }) {
   return (
     <div className="panel chat-panel">
       <div className="chat-header">
-        <h2 className="serif">Ask about your document</h2>
-        <p>Answers come only from the PDF you uploaded</p>
+        <h2 className="serif">Ask about your documents</h2>
+        <p>{focusLabel || 'Answers come only from the files you selected in the sidebar.'}</p>
       </div>
 
       <div className="chat-messages" ref={scrollRef}>
@@ -48,7 +48,7 @@ export default function ChatPanel({ ready, onAsk }) {
           <div className="empty-state">
             <div className="empty-icon">✎</div>
             <h3 className="serif">Nothing asked yet</h3>
-            <p>{ready ? 'Try asking a question about the document below.' : 'Upload and index a PDF to start asking questions.'}</p>
+            <p>{ready ? 'Try asking a question about the selected files below.' : 'Upload and index one or more PDFs to start asking questions.'}</p>
           </div>
         )}
 

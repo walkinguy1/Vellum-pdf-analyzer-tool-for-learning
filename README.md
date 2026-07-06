@@ -1,7 +1,7 @@
 # Vellum — Ask Your Document
 
-Upload a PDF, ask questions about it, get answers grounded strictly in that
-document with page-level source citations.
+Upload one or more PDFs, ask questions about them, get answers grounded
+strictly in the selected files with page-level source citations.
 
 **Stack:** FastAPI + FAISS + Gemini on the backend, React + Vite on the frontend.
 
@@ -88,14 +88,14 @@ Open the URL it prints — usually `http://localhost:5173`.
 
 ## 4. Using it
 
-1. Drop a PDF in (or click "Choose file")
-2. Wait for the four-step indexing progress to finish (extract → chunk →
-   embed → ready) — this takes longer for bigger PDFs since embedding is
-   one API call per chunk
-3. Ask questions in the chat panel — each answer shows the page(s) and
+1. Drop one or more PDFs in (or click "Choose files")
+2. Use the sidebar checkboxes to focus the assistant on any subset of the
+   uploaded files
+3. Wait for indexing to finish on the selected files, then ask questions
+   in the chat panel — each answer shows the file name, page(s), and
    snippet(s) it was drawn from
 
-To try a different PDF, click **Replace PDF**.
+To remove everything and start over, click **Clear all files**.
 
 ## Troubleshooting
 
@@ -110,6 +110,6 @@ To try a different PDF, click **Replace PDF**.
 ## Notes
 
 - Everything is in-memory — restarting the backend clears any indexed
-  documents. There's no database and no auth; this is scoped as a demo/single
-  document at a time, not a production deployment.
+   documents. There's no database and no auth; this is scoped as a demo/multi
+   document workspace, not a production deployment.
 - See `TECHNICAL.md` for how the RAG pipeline actually works under the hood.

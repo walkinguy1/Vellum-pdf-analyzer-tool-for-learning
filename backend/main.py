@@ -2,6 +2,7 @@ import os
 import shutil
 import threading
 import uuid
+from typing import Optional
 
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -11,7 +12,7 @@ from config import TOP_K, UPLOAD_DIR
 from embeddings import embed_query, embed_texts
 from models import AskRequest, AskResponse, DocumentInfo, Source, StatusResponse, StatusStep
 from pdf_processor import chunk_pages, extract_pages
-from rag import generate_answer
+from rag import RetrievedChunk, generate_answer
 from vector_store import VectorStore
 
 app = FastAPI(title="Vellum API")
@@ -26,6 +27,12 @@ app.add_middleware(
 # In-memory document store. Fine for a demo/single-user deployment;
 # swap for Redis/DB if this needs to survive restarts or scale to many users.
 DOCS: dict = {}
+
+
+def _get_candidate_doc_ids(doc_ids: Optional[list[str]]) -> list[str]:
+    if doc_ids:
+        return [doc_id for doc_id in doc_ids if doc_id in DOCS]
+    return list(DOCS.keys())
 
 
 def process_document(doc_id: str, pdf_path: str) -> None:
@@ -143,28 +150,52 @@ async def get_document(doc_id: str):
 
 @app.post("/ask", response_model=AskResponse)
 async def ask_question(req: AskRequest):
-    doc = DOCS.get(req.doc_id)
-    if not doc:
+    doc_ids = _get_candidate_doc_ids(req.doc_ids or [req.doc_id])
+    if not doc_ids:
         raise HTTPException(404, "Document not found")
-    if doc["stage"] != "ready":
-        raise HTTPException(409, "Document is still being indexed")
 
-    store: VectorStore = doc["store"]
     query_vec = embed_query(req.question)
-    hits = store.search(query_vec, TOP_K)
+    candidates: list[tuple[float, RetrievedChunk]] = []
+    selected_docs_are_indexing = False
 
-    if not hits:
-        return AskResponse(answer="I couldn't find relevant content in this document.", sources=[])
+    for doc_id in doc_ids:
+        doc = DOCS.get(doc_id)
+        if not doc:
+            continue
+        if doc["stage"] != "ready" or not doc["store"]:
+            selected_docs_are_indexing = True
+            continue
 
-    answer = generate_answer(req.question, hits)
+        store: VectorStore = doc["store"]
+        hits = store.search(query_vec, TOP_K)
+        for chunk, score in hits:
+            candidates.append(
+                (
+                    score,
+                    RetrievedChunk(
+                        filename=doc["filename"],
+                        page=chunk.page,
+                        text=chunk.text,
+                    ),
+                )
+            )
+
+    if not candidates:
+        if selected_docs_are_indexing:
+            raise HTTPException(409, "Selected documents are still being indexed")
+        return AskResponse(answer="I couldn't find relevant content in the selected documents.", sources=[])
+
+    ranked_candidates = sorted(candidates, key=lambda item: item[0], reverse=True)[:TOP_K]
+    answer = generate_answer(req.question, [hit for _score, hit in ranked_candidates])
 
     sources = [
         Source(
-            page=chunk.page,
+            filename=hit.filename,
+            page=hit.page,
             score=round(score, 2),
-            snippet=chunk.text[:180] + ("…" if len(chunk.text) > 180 else ""),
+            snippet=hit.text[:180] + ("…" if len(hit.text) > 180 else ""),
         )
-        for chunk, score in hits
+        for score, hit in ranked_candidates
     ]
     return AskResponse(answer=answer, sources=sources)
 

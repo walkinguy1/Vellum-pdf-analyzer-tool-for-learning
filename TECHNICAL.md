@@ -54,7 +54,7 @@ Upload PDF
 
 ──────────── (document is now "ready") ────────────
 
-Ask a question
+Ask a question about the selected files
    │
    ▼
 ┌─────────────────────┐
@@ -64,17 +64,17 @@ Ask a question
    │
    ▼
 ┌─────────────────────┐
-│ 6. Search             │  FAISS returns the top-4 chunks
-│    (vector_store.py)  │  whose vectors are closest to the
-│                       │  question's vector
+│ 6. Search             │  FAISS returns the top-4 chunks from
+│    (vector_store.py)  │  each selected ready document, then
+│                       │  the backend merges the candidates
 └─────────────────────┘
    │
    ▼
 ┌─────────────────────┐
-│ 7. Generate            │  Those 4 chunks get stuffed into a
-│    (rag.py)             │  prompt template and sent to
-│                         │  gemini-2.5-flash, which answers
-│                         │  using only that context
+│ 7. Generate            │  The merged top chunks get stuffed
+│    (rag.py)             │  into a prompt template with each
+│                         │  file name and page number, then
+│                         │  sent to gemini-2.5-flash
 └─────────────────────┘
    │
    ▼
@@ -151,17 +151,17 @@ FAISS itself only knows about numbers — it has no idea what a "page" is.
 same order as vectors were added to the index, so
 `index.search()` returning "vector at position 37" can be mapped straight
 back to `self.chunks[37]` to recover the original text and page number.
-This positional-parallel-array trick is the simplest possible metadata
-store; a production system would use FAISS's `IndexIDMap` or an external
-DB instead so deletions/updates don't require rebuilding everything.
+In the multi-document flow, each selected file still owns its own FAISS
+index; the backend searches them separately and merges the best matches
+before calling the LLM.
 
 ## The generation prompt (`rag.py`)
 
 The retrieved chunks get formatted like this before being sent to the LLM:
 
 ```
-[1] (page 7) a deadlock arises when four conditions hold simultaneously...
-[2] (page 8) circular wait means a closed chain of processes each...
+[1] (chapter-notes.pdf, page 7) a deadlock arises when four conditions hold simultaneously...
+[2] (lab-report.pdf, page 8) circular wait means a closed chain of processes each...
 ```
 
 ...followed by the system instruction (answer only from context, say so if

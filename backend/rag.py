@@ -1,9 +1,17 @@
-from typing import List, Tuple
+from dataclasses import dataclass
+from typing import List
 
 from google import genai
 
 from config import GEMINI_API_KEY, GENERATION_MODEL
 from pdf_processor import Chunk
+
+
+@dataclass
+class RetrievedChunk:
+    filename: str
+    page: int
+    text: str
 
 _client = None
 
@@ -23,10 +31,10 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_prompt(question: str, hits: List[Tuple[Chunk, float]]) -> str:
+def build_prompt(question: str, hits: List[RetrievedChunk]) -> str:
     context_blocks = [
-        f"[{i}] (page {chunk.page}) {chunk.text}"
-        for i, (chunk, _score) in enumerate(hits, start=1)
+        f"[{i}] ({hit.filename}, page {hit.page}) {hit.text}"
+        for i, hit in enumerate(hits, start=1)
     ]
     context = "\n\n".join(context_blocks)
     return (
@@ -37,7 +45,7 @@ def build_prompt(question: str, hits: List[Tuple[Chunk, float]]) -> str:
     )
 
 
-def generate_answer(question: str, hits: List[Tuple[Chunk, float]]) -> str:
+def generate_answer(question: str, hits: List[RetrievedChunk]) -> str:
     prompt = build_prompt(question, hits)
     response = _get_client().models.generate_content(
         model=GENERATION_MODEL,

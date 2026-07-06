@@ -1,19 +1,19 @@
 import { useRef, useState } from 'react'
 
-export default function UploadZone({ onFileSelected }) {
+export default function UploadZone({ onFilesSelected }) {
   const inputRef = useRef(null)
   const [dragActive, setDragActive] = useState(false)
 
   function handleDrop(e) {
     e.preventDefault()
     setDragActive(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file) onFileSelected(file)
+    const files = Array.from(e.dataTransfer.files ?? [])
+    if (files.length) onFilesSelected(files)
   }
 
   function handleChange(e) {
-    const file = e.target.files?.[0]
-    if (file) onFileSelected(file)
+    const files = Array.from(e.target.files ?? [])
+    if (files.length) onFilesSelected(files)
     e.target.value = ''
   }
 
@@ -28,19 +28,20 @@ export default function UploadZone({ onFileSelected }) {
       onDrop={handleDrop}
     >
       <div className="upload-icon">⇧</div>
-      <h3>Upload a PDF to get started</h3>
-      <p>Drop a document here and ask questions about it. Answers are drawn only from the file you provide.</p>
+      <h3>Upload one or more PDFs</h3>
+      <p>Drop files here or choose them from disk. Keep adding more, then use the sidebar to focus the assistant on any subset.</p>
       <button className="upload-btn" onClick={() => inputRef.current?.click()}>
-        Choose file
+        Choose files
       </button>
       <input
         ref={inputRef}
         type="file"
         accept="application/pdf"
+        multiple
         hidden
         onChange={handleChange}
       />
-      <p className="upload-hint">PDF up to 20MB · single document</p>
+      <p className="upload-hint">PDF up to 20MB each · multiple documents supported</p>
     </div>
   )
 }

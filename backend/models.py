@@ -1,5 +1,6 @@
 from typing import List, Optional, Literal
-from pydantic import BaseModel
+
+from pydantic import BaseModel, Field
 
 
 class StatusStep(BaseModel):
@@ -22,9 +23,11 @@ class StatusResponse(BaseModel):
 class AskRequest(BaseModel):
     doc_id: str
     question: str
+    doc_ids: List[str] = Field(default_factory=list)
 
 
 class Source(BaseModel):
+    filename: str
     page: int
     score: float
     snippet: str

@@ -14,11 +14,11 @@ export async function getStatus(docId) {
   return res.json()
 }
 
-export async function askQuestion(docId, question) {
+export async function askQuestion(docIds, question) {
   const res = await fetch(`${BASE}/ask`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ doc_id: docId, question }),
+    body: JSON.stringify({ doc_id: docIds[0] ?? '', doc_ids: docIds, question }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
