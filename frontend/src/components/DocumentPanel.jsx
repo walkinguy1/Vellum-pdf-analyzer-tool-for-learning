@@ -2,10 +2,10 @@ import UploadZone from './UploadZone.jsx'
 import IndexingProgress from './IndexingProgress.jsx'
 import { Files, Trash2, CheckCircle2, AlertCircle, Loader2, FileText, CheckSquare } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { clsx, type ClassValue } from 'clsx'
+import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-function cn(...inputs: ClassValue[]) {
+function cn(...inputs) {
   return twMerge(clsx(inputs))
 }
 
