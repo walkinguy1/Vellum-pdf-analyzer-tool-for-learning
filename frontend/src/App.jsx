@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import DocumentPanel from './components/DocumentPanel.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
 import { uploadDocument, getStatus, askQuestion } from './api.js'
+import { Sparkles, Github, BookOpen, Layers } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function App() {
   const [docs, setDocs] = useState([])
@@ -73,28 +75,105 @@ export default function App() {
   const selectedDocs = docs.filter((doc) => doc.selected)
   const readySelectedCount = selectedDocs.filter((doc) => doc.status?.stage === 'ready').length
   const focusLabel = selectedDocs.length
-    ? `Searching ${readySelectedCount} ready file${readySelectedCount === 1 ? '' : 's'} out of ${selectedDocs.length} selected.`
-    : 'Select one or more files in the sidebar to focus the assistant.'
+    ? `Analyzing ${readySelectedCount} ready file${readySelectedCount === 1 ? '' : 's'} from ${selectedDocs.length} selected.`
+    : 'Select documents in the library to focus the analysis.'
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>
-          <span className="mark">✦</span> Vellum
-        </h1>
-        <p>Upload a PDF, then ask it questions. Every answer is grounded in the document, with page-level sources.</p>
+    <div className="min-h-screen bg-paper flex flex-col font-sans">
+      {/* Navigation Header */}
+      <header className="sticky top-0 z-50 bg-paper/80 backdrop-blur-md border-b border-line px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
+              <Layers className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="serif text-2xl font-bold text-ink leading-none">Vellum</h1>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent mt-1">PDF Analyzer</p>
+            </div>
+          </div>
+          
+          <div className="hidden md:flex items-center gap-6">
+            <nav className="flex items-center gap-4">
+              <a href="#" className="text-sm font-semibold text-ink hover:text-accent transition-colors">Explorer</a>
+              <a href="#" className="text-sm font-semibold text-ink-soft hover:text-accent transition-colors">Collections</a>
+            </nav>
+            <div className="h-4 w-px bg-line" />
+            <a 
+              href="https://github.com/walkinguy1/Vellum-pdf-analyzer-tool-for-learning" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-ink-soft hover:text-ink transition-colors"
+            >
+              <Github size={20} />
+            </a>
+          </div>
+        </div>
       </header>
 
-      <div className="app-body">
-        <DocumentPanel
-          docs={docs}
-          onFilesSelected={handleFilesSelected}
-          onToggleSelected={handleToggleSelected}
-          onClearAll={handleClearAll}
-          onSelectAll={handleSelectAll}
-        />
-        <ChatPanel ready={readySelectedCount > 0} onAsk={handleAsk} focusLabel={focusLabel} />
-      </div>
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Sidebar */}
+          <motion.aside 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-4 xl:col-span-3"
+          >
+            <DocumentPanel
+              docs={docs}
+              onFilesSelected={handleFilesSelected}
+              onToggleSelected={handleToggleSelected}
+              onClearAll={handleClearAll}
+              onSelectAll={handleSelectAll}
+            />
+          </motion.aside>
+
+          {/* Chat Interface */}
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-8 xl:col-span-9"
+          >
+            <div className="flex flex-col gap-6">
+              <div className="bg-accent-soft/30 border border-accent/10 rounded-2xl p-6 flex items-start gap-4">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <BookOpen className="text-accent" size={24} />
+                </div>
+                <div>
+                  <h2 className="serif text-xl font-semibold text-ink">Document-Grounded Intelligence</h2>
+                  <p className="text-sm text-ink-soft mt-1 leading-relaxed">
+                    Vellum uses Retrieval-Augmented Generation (RAG) to ensure every answer is backed by your documents. 
+                    Upload your PDFs, and I'll help you find exactly what you're looking for with page-level citations.
+                  </p>
+                </div>
+              </div>
+              
+              <ChatPanel 
+                ready={readySelectedCount > 0} 
+                onAsk={handleAsk} 
+                focusLabel={focusLabel} 
+              />
+            </div>
+          </motion.section>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-line py-6 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs font-medium text-ink-faint uppercase tracking-wider">
+            &copy; 2026 Vellum PDF Analyzer &middot; Built for learning
+          </p>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 text-[10px] font-bold text-sage uppercase tracking-widest">
+              <div className="w-1.5 h-1.5 bg-sage rounded-full" />
+              System Online
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
